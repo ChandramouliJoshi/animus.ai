@@ -1,0 +1,28 @@
+# Python virtual environment
+animus/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.*
+
+# Datasets
+data/
+
+# Generated models
+models/
+*.pkl
+*.joblib
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
