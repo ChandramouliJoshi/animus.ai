@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.schemas.transaction import TransactionRequest
 from app.services.fraud_detector import (
@@ -11,6 +12,15 @@ app = FastAPI(
     title="Animus AI",
     description="AI-powered fraud detection and risk management API",
     version="1.0.0"
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
