@@ -18,6 +18,15 @@ type Prediction = {
   }[]
 }
 
+type HistoryItem = {
+  id: number
+  timestamp: string
+  amount: number
+  riskScorePercentage: number
+  riskLevel: string
+  decision: string
+}
+
 const FEATURE_LABELS: Record<string, string> = {
   CUSTOMER_AMOUNT_RATIO: 'Transaction amount vs customer history',
   CUSTOMER_PREV_AMOUNT: 'Previous customer transaction',
@@ -129,6 +138,7 @@ function App() {
   const [systemOpen, setSystemOpen] = useState(false)
 
   const [prediction, setPrediction] = useState<Prediction | null>(null)
+  const [history, setHistory] = useState<HistoryItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -307,6 +317,22 @@ function App() {
       const data: Prediction = await response.json()
 
       setPrediction(data)
+
+      const historyItem: HistoryItem = {
+        id: Date.now(),
+        timestamp: new Date().toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        amount: transactionAmount,
+        riskScorePercentage: data.risk_score_percentage,
+        riskLevel: data.risk_level,
+        decision: data.decision,
+      }
+
+      setHistory((currentHistory) =>
+        [historyItem, ...currentHistory].slice(0, 10)
+      )
     } catch (err) {
       setError('Could not connect to Animus API.')
       console.error(err)
@@ -1371,6 +1397,137 @@ function App() {
           </div>
 
         </section>
+
+
+        {/* =========================
+            TRANSACTION HISTORY
+        ========================= */}
+
+        <section className="history-section">
+
+          <div className="panel history-panel">
+
+            <div className="panel-header">
+
+              <div>
+                <p className="eyebrow">ACTIVITY</p>
+                <h3>Transaction History</h3>
+              </div>
+
+              <span className="panel-badge">
+                {history.length} {history.length === 1 ? 'transaction' : 'transactions'}
+              </span>
+
+            </div>
+
+
+            {history.length > 0 ? (
+
+              <div className="history-table-wrapper">
+
+                <table className="history-table">
+
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Amount</th>
+                      <th>Risk Score</th>
+                      <th>Risk Level</th>
+                      <th>Decision</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {history.map((item) => (
+
+                      <tr key={item.id}>
+
+                        <td className="history-time">
+                          {item.timestamp}
+                        </td>
+
+                        <td className="history-amount">
+                          ₹{item.amount.toLocaleString('en-IN')}
+                        </td>
+
+                        <td>
+
+                          <div className="history-risk">
+
+                            <span>
+                              {item.riskScorePercentage}%
+                            </span>
+
+                            <div className="history-risk-track">
+                              <div
+                                className="history-risk-fill"
+                                style={{
+                                  width: `${Math.min(
+                                    item.riskScorePercentage,
+                                    100
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+
+                          </div>
+
+                        </td>
+
+                        <td>
+                          <span
+                            className={`history-risk-level risk-${item.riskLevel
+                              .toLowerCase()
+                              .replace('-', '')}`}
+                          >
+                            {item.riskLevel}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span
+                            className={`history-decision decision-${item.decision.toLowerCase()}`}
+                          >
+                            {item.decision}
+                          </span>
+                        </td>
+
+                      </tr>
+
+                    ))}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            ) : (
+
+              <div className="history-empty">
+
+                <div className="history-empty-icon">
+                  +
+                </div>
+
+                <div>
+                  <strong>No transactions yet</strong>
+
+                  <p>
+                    Analyze a transaction to start building your
+                    activity history.
+                  </p>
+                </div>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </section>
+
 
       </main>
 
