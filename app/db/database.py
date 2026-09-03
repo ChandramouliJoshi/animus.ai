@@ -99,3 +99,82 @@ def get_transactions(limit: int = 10):
     connection.close()
 
     return [dict(row) for row in rows]
+
+def get_analytics():
+    connection = get_connection()
+
+    total_transactions = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM transactions
+        """
+    ).fetchone()["count"]
+
+    blocked = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM transactions
+        WHERE decision = 'BLOCK'
+        """
+    ).fetchone()["count"]
+
+    review = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM transactions
+        WHERE decision = 'REVIEW'
+        """
+    ).fetchone()["count"]
+
+    allowed = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM transactions
+        WHERE decision = 'ALLOW'
+        """
+    ).fetchone()["count"]
+
+    high_risk = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM transactions
+        WHERE risk_level = 'HIGH'
+        """
+    ).fetchone()["count"]
+
+    medium_high_risk = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM transactions
+        WHERE risk_level = 'MEDIUM-HIGH'
+        """
+    ).fetchone()["count"]
+
+    medium_risk = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM transactions
+        WHERE risk_level = 'MEDIUM'
+        """
+    ).fetchone()["count"]
+
+    low_risk = connection.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM transactions
+        WHERE risk_level = 'LOW'
+        """
+    ).fetchone()["count"]
+
+    connection.close()
+
+    return {
+        "total_transactions": total_transactions,
+        "blocked": blocked,
+        "review": review,
+        "allowed": allowed,
+        "high_risk": high_risk,
+        "medium_high_risk": medium_high_risk,
+        "medium_risk": medium_risk,
+        "low_risk": low_risk,
+    }

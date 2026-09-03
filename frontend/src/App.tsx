@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 type Prediction = {
@@ -25,6 +25,17 @@ type HistoryItem = {
   riskScorePercentage: number
   riskLevel: string
   decision: string
+}
+
+type Analytics = {
+  total_transactions: number
+  blocked: number
+  review: number
+  allowed: number
+  high_risk: number
+  medium_high_risk: number
+  medium_risk: number
+  low_risk: number
 }
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -102,20 +113,94 @@ function getFeatureExplanation(item: Prediction['explanations'][number]) {
   }
 }
 
+function getRiskHeadline(riskLevel: string) {
+  switch (riskLevel) {
+    case 'HIGH':
+      return 'High-risk transaction'
+    case 'MEDIUM-HIGH':
+      return 'Elevated-risk transaction'
+    case 'MEDIUM':
+      return 'Moderate-risk transaction'
+    default:
+      return 'Low-risk transaction'
+  }
+}
+
+function getRiskSummary(riskLevel: string, decision: string) {
+  if (riskLevel === 'HIGH') {
+    return `This transaction shows multiple signals that are significantly outside the expected pattern. The recommended action is to ${decision.toLowerCase()} the transaction.`
+  }
+
+  if (riskLevel === 'MEDIUM-HIGH') {
+    return `This transaction shows unusual activity that deserves attention. The recommended action is to ${decision.toLowerCase()} the transaction.`
+  }
+
+  if (riskLevel === 'MEDIUM') {
+    return `Some transaction signals are unusual, but the overall risk is not strongly elevated. The recommended action is to ${decision.toLowerCase()} the transaction.`
+  }
+
+  return `The transaction is broadly consistent with the expected activity pattern. The recommended action is to ${decision.toLowerCase()} the transaction.`
+}
+
+function getHumanReason(item: Prediction['explanations'][number]) {
+  switch (item.feature) {
+    case 'CUSTOMER_AMOUNT_RATIO':
+      return `The transaction amount is ${item.value.toFixed(2)}× the customer's historical average.`
+    case 'CUSTOMER_AMOUNT_DEVIATION':
+      return `The transaction differs from the customer's historical average by ₹${Math.abs(item.value).toLocaleString('en-IN')}.`
+    case 'CUSTOMER_PREV_AMOUNT':
+      return `The customer's previous transaction amount was ₹${item.value.toLocaleString('en-IN')}.`
+    case 'CUSTOMER_AVG_AMOUNT_BEFORE':
+      return `The customer's usual transaction amount is around ₹${item.value.toLocaleString('en-IN')}.`
+    case 'CUSTOMER_TX_COUNT_BEFORE':
+      return `The customer has ${item.value.toLocaleString('en-IN')} previous transactions in the available history.`
+    case 'CUSTOMER_TX_COUNT_5M':
+      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
+    case 'CUSTOMER_TX_COUNT_1H':
+      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour.`
+    case 'CUSTOMER_TX_COUNT_24H':
+      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
+    case 'TERMINAL_AMOUNT_RATIO':
+      return `The transaction amount is ${item.value.toFixed(2)}× the terminal's historical average.`
+    case 'TERMINAL_AMOUNT_DEVIATION':
+      return `The transaction differs from the terminal's historical average by ₹${Math.abs(item.value).toLocaleString('en-IN')}.`
+    case 'TERMINAL_AVG_AMOUNT_BEFORE':
+      return `The terminal's usual transaction amount is around ₹${item.value.toLocaleString('en-IN')}.`
+    case 'TERMINAL_PREV_AMOUNT':
+      return `The terminal's previous transaction amount was ₹${item.value.toLocaleString('en-IN')}.`
+    case 'TERMINAL_TX_COUNT_BEFORE':
+      return `The terminal has processed ${item.value.toLocaleString('en-IN')} previous transactions in the available history.`
+    case 'TERMINAL_TX_COUNT_5M':
+      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
+    case 'TERMINAL_TX_COUNT_1H':
+      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour.`
+    case 'TERMINAL_TX_COUNT_24H':
+      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
+    case 'SYSTEM_TX_COUNT_5M':
+      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
+    case 'SYSTEM_TX_COUNT_1H':
+      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour.`
+    case 'SYSTEM_TX_COUNT_24H':
+      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
+    default:
+      return item.description
+  }
+}
+
 function App() {
-  const [amount, setAmount] = useState('100')
-  const [hour, setHour] = useState('12')
-  const [day, setDay] = useState('2')
+  const [amount, setAmount] = useState('')
+  const [hour, setHour] = useState('')
+  const [day, setDay] = useState('')
 
   // Customer features
   const [customerTimeSincePrev, setCustomerTimeSincePrev] = useState('0')
-  const [customerPrevAmount, setCustomerPrevAmount] = useState('0')
-  const [customerTxBefore, setCustomerTxBefore] = useState('0')
+  const [customerPrevAmount, setCustomerPrevAmount] = useState('')
+  const [customerTxBefore, setCustomerTxBefore] = useState('')
   const [customerTx5m, setCustomerTx5m] = useState('0')
   const [customerTx1h, setCustomerTx1h] = useState('0')
   const [customerTx24h, setCustomerTx24h] = useState('0')
-  const [customerAvgAmount, setCustomerAvgAmount] = useState('0')
-  const [customerHasHistory, setCustomerHasHistory] = useState('0')
+  const [customerAvgAmount, setCustomerAvgAmount] = useState('')
+  const [customerHasHistory, setCustomerHasHistory] = useState('')
 
   // Terminal features
   const [terminalTimeSincePrev, setTerminalTimeSincePrev] = useState('0')
@@ -139,8 +224,73 @@ function App() {
 
   const [prediction, setPrediction] = useState<Prediction | null>(null)
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+    async function loadHistory() {
+    try {
+      const response = await fetch(
+        'http://127.0.0.1:8000/transactions'
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to load transaction history')
+      }
+    
+      const data = await response.json()
+
+      const formattedHistory: HistoryItem[] = data.map(
+        (item: {
+          id: number
+          created_at: string
+          amount: number
+          risk_score_percentage: number
+          risk_level: string
+          decision: string
+        }) => ({
+          id: item.id,
+          timestamp: new Date(item.created_at).toLocaleTimeString(
+            'en-IN',
+            {
+              hour: '2-digit',
+              minute: '2-digit',
+            }
+          ),
+          amount: item.amount,
+          riskScorePercentage: item.risk_score_percentage,
+          riskLevel: item.risk_level,
+          decision: item.decision,
+        })
+      )
+
+      setHistory(formattedHistory)
+    } catch (err) {
+      console.error('Could not load transaction history:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadHistory()
+    loadAnalytics()
+  }, [])
+
+  async function loadAnalytics() {
+    try {
+      const response = await fetch(
+        'http://127.0.0.1:8000/analytics'
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to load analytics')
+      }
+
+      const data: Analytics = await response.json()
+
+      setAnalytics(data)
+    } catch (err) {
+      console.error('Could not load analytics:', err)
+    }
+  }
 
   // =========================
   // DEMO SCENARIOS
@@ -243,8 +393,28 @@ function App() {
   // =========================
 
   async function analyzeTransaction() {
-    setLoading(true)
     setError('')
+
+    const requiredFields = [
+      { value: amount, label: 'Transaction Amount' },
+      { value: hour, label: 'Transaction Hour' },
+      { value: day, label: 'Day of Week' },
+      { value: customerPrevAmount, label: 'Previous Customer Amount' },
+      { value: customerTxBefore, label: 'Customer Transactions Before' },
+      { value: customerAvgAmount, label: 'Customer Historical Average' },
+      { value: customerHasHistory, label: 'Customer History' },
+    ]
+
+    const missingFields = requiredFields
+      .filter((field) => field.value.trim() === '')
+      .map((field) => field.label)
+
+    if (missingFields.length > 0) {
+      setError('Please fill in all required fields before analyzing the transaction.')
+      return
+    }
+
+    setLoading(true)
 
     const transactionAmount = Number(amount)
     const customerAverage = Number(customerAvgAmount)
@@ -318,24 +488,20 @@ function App() {
 
       setPrediction(data)
 
-      const historyItem: HistoryItem = {
-        id: Date.now(),
-        timestamp: new Date().toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        amount: transactionAmount,
-        riskScorePercentage: data.risk_score_percentage,
-        riskLevel: data.risk_level,
-        decision: data.decision,
+      await loadHistory()
+      await loadAnalytics()
+    } catch (err) {
+      if (err instanceof TypeError) {
+        setError(
+          'Animus API is unavailable. Make sure the backend is running and try again.'
+        )
+      } else {
+        setError(
+          'The transaction could not be analyzed. Please check the details and try again.'
+        )
       }
 
-      setHistory((currentHistory) =>
-        [historyItem, ...currentHistory].slice(0, 10)
-      )
-    } catch (err) {
-      setError('Could not connect to Animus API.')
-      console.error(err)
+      console.error('Transaction analysis failed:', err)
     } finally {
       setLoading(false)
     }
@@ -576,13 +742,14 @@ function App() {
 
                   <input
                     id="amount"
+                    required
                     type="number"
                     min="0"
                     value={amount}
                     onChange={(event) =>
                       setAmount(event.target.value)
                     }
-                    placeholder="100.00"
+                    placeholder="e.g. 100.00"
                   />
                 </div>
               </div>
@@ -597,10 +764,12 @@ function App() {
 
                   <input
                     id="hour"
+                    required
                     type="number"
                     min="0"
                     max="23"
                     value={hour}
+                    placeholder="e.g. 14"
                     onChange={(event) =>
                       setHour(event.target.value)
                     }
@@ -614,12 +783,13 @@ function App() {
                   </label>
 
                   <select
-                    id="day"
+                    id="day" required
                     value={day}
                     onChange={(event) =>
                       setDay(event.target.value)
                     }
                   >
+                    <option value="" disabled>Select day</option>
                     <option value="0">Monday</option>
                     <option value="1">Tuesday</option>
                     <option value="2">Wednesday</option>
@@ -663,9 +833,11 @@ function App() {
 
                     <input
                       id="customer-prev"
+                      required
                       type="number"
                       min="0"
                       value={customerPrevAmount}
+                      placeholder="e.g. 220"
                       onChange={(event) =>
                         setCustomerPrevAmount(
                           event.target.value
@@ -686,9 +858,11 @@ function App() {
 
                     <input
                       id="customer-avg"
+                      required
                       type="number"
                       min="0"
                       value={customerAvgAmount}
+                      placeholder="e.g. 240"
                       onChange={(event) =>
                         setCustomerAvgAmount(
                           event.target.value
@@ -706,9 +880,11 @@ function App() {
 
                   <input
                     id="customer-before"
+                    required
                     type="number"
                     min="0"
                     value={customerTxBefore}
+                    placeholder="e.g. 18"
                     onChange={(event) =>
                       setCustomerTxBefore(
                         event.target.value
@@ -724,7 +900,7 @@ function App() {
                   </label>
 
                   <select
-                    id="customer-history"
+                    id="customer-history" required
                     value={customerHasHistory}
                     onChange={(event) =>
                       setCustomerHasHistory(
@@ -732,6 +908,7 @@ function App() {
                       )
                     }
                   >
+                    <option value="" disabled>Select history</option>
                     <option value="0">No History</option>
                     <option value="1">Has History</option>
                   </select>
@@ -1243,9 +1420,14 @@ function App() {
                   onClick={analyzeTransaction}
                   disabled={loading}
                 >
-                  {loading
-                    ? 'Analyzing transaction...'
-                    : 'Analyze Transaction'}
+                  {loading ? (
+                    <>
+                      <span className="button-spinner" aria-hidden="true" />
+                      Analyzing transaction...
+                    </>
+                  ) : (
+                    'Analyze Transaction'
+                  )}
                 </button>
 
               </div>
@@ -1262,7 +1444,7 @@ function App() {
 
 
           {/* =========================
-              EXPLAINABILITY
+              HUMAN-FRIENDLY ASSESSMENT
           ========================= */}
 
           <div className="panel explainability-panel">
@@ -1271,107 +1453,221 @@ function App() {
 
               <div>
                 <p className="eyebrow">
-                  EXPLAINABILITY
+                  RISK ASSESSMENT
                 </p>
 
                 <h3>
-                  Risk Factors
+                  Transaction Assessment
                 </h3>
               </div>
 
-              <span className="panel-badge">
-                SHAP
+              <span className={`panel-badge ${prediction ? `result-badge-${prediction.risk_level.toLowerCase().replace('-', '')}` : ''}`}>
+                {prediction ? prediction.risk_level : 'READY'}
               </span>
 
             </div>
 
 
             {prediction ? (
-              <div className="explanations">
 
-                <div className="explanation-intro">
-                  <span>
-                    MODEL SIGNALS
-                  </span>
+              <div className="human-assessment">
 
-                  <p>
-                    The strongest factors influencing this
-                    transaction's risk score.
-                  </p>
+                <div
+                  className={`assessment-status assessment-${prediction.risk_level
+                    .toLowerCase()
+                    .replace('-', '')}`}
+                >
+                  <span className="assessment-status-dot" />
+
+                  <div>
+                    <span>RISK ASSESSMENT</span>
+                    <strong>
+                      {getRiskHeadline(prediction.risk_level)}
+                    </strong>
+                  </div>
                 </div>
 
 
-                {prediction.explanations.map(
-                  (item, index) => (
-                    <div
-                      className="explanation"
-                      key={item.feature}
-                    >
+                <div className="assessment-amount">
+                  <span>TRANSACTION</span>
 
-                      <div className="explanation-index">
-                        0{index + 1}
-                      </div>
+                  <strong>
+                    ₹{Number(amount).toLocaleString('en-IN')}
+                  </strong>
+                </div>
 
 
-                      <div className="explanation-content">
+                <div className="assessment-summary">
+                  <p>
+                    {getRiskSummary(
+                      prediction.risk_level,
+                      prediction.decision
+                    )}
+                  </p>
+                  <div className="assessment-score">
+                    <span>RISK SCORE</span>
+                    <strong>{prediction.risk_score_percentage}%</strong>
+                  </div>
+                </div>
 
-                        <div className="explanation-top">
 
+                <div className="assessment-action">
+
+                  <div>
+                    <span>RECOMMENDED ACTION</span>
+                    <strong>{prediction.decision}</strong>
+                  </div>
+
+                  <span
+                    className={`assessment-action-badge action-${prediction.decision.toLowerCase()}`}
+                  >
+                    {prediction.decision === 'BLOCK'
+                      ? 'Stop transaction'
+                      : prediction.decision === 'REVIEW'
+                        ? 'Needs review'
+                        : 'Proceed'}
+                  </span>
+
+                </div>
+
+
+                <div className="assessment-reasons">
+
+                  <div className="assessment-section-label">
+                    <span>WHY THIS RESULT?</span>
+
+                    <p>
+                      The strongest signals influencing the risk assessment.
+                    </p>
+                  </div>
+
+
+                  {prediction.explanations
+                    .slice(0, 3)
+                    .map((item) => (
+
+                      <div
+                        className="assessment-reason"
+                        key={item.feature}
+                      >
+
+                        <div
+                          className={`assessment-reason-icon ${
+                            item.direction === 'increases_risk'
+                              ? 'reason-up'
+                              : 'reason-down'
+                          }`}
+                        >
+                          {item.direction === 'increases_risk'
+                            ? '↑'
+                            : '↓'}
+                        </div>
+
+                        <div>
                           <strong>
                             {getFeatureLabel(item.feature)}
                           </strong>
 
-                          <span
-                            className={
-                              item.direction ===
-                              'increases_risk'
-                                ? 'impact positive'
-                                : 'impact negative'
-                            }
-                          >
-                            {item.impact > 0
-                              ? '+'
-                              : ''}
-
-                            {item.impact.toFixed(3)}
-                          </span>
-
+                          <p>
+                            {getHumanReason(item)}
+                          </p>
                         </div>
-
-
-                        <div className="impact-track">
-
-                          <div
-                            className={
-                              item.direction ===
-                              'increases_risk'
-                                ? 'impact-fill positive-fill'
-                                : 'impact-fill negative-fill'
-                            }
-                            style={{
-                              width: `${Math.min(
-                                Math.abs(
-                                  item.impact
-                                ) * 12,
-                                100
-                              )}%`,
-                            }}
-                          />
-
-                        </div>
-
-
-                        <p>
-                          {getFeatureExplanation(item)}
-                        </p>
 
                       </div>
 
-                    </div>
-                  )
-                )}
+                    ))}
+
+                </div>
+
+
+                <details className="technical-details">
+
+                  <summary>
+                    <span>
+                      Technical model details
+                    </span>
+
+                    <span>
+                      View SHAP +
+                    </span>
+                  </summary>
+
+
+                  <div className="technical-details-content">
+
+                    {prediction.explanations.map(
+                      (item, index) => (
+
+                        <div
+                          className="explanation"
+                          key={item.feature}
+                        >
+
+                          <div className="explanation-index">
+                            0{index + 1}
+                          </div>
+
+
+                          <div className="explanation-content">
+
+                            <div className="explanation-top">
+
+                              <strong>
+                                {getFeatureLabel(item.feature)}
+                              </strong>
+
+                              <span
+                                className={
+                                  item.direction ===
+                                  'increases_risk'
+                                    ? 'impact positive'
+                                    : 'impact negative'
+                                }
+                              >
+                                {item.impact > 0 ? '+' : ''}
+                                {item.impact.toFixed(3)}
+                              </span>
+
+                            </div>
+
+
+                            <div className="impact-track">
+
+                              <div
+                                className={
+                                  item.direction ===
+                                  'increases_risk'
+                                    ? 'impact-fill positive-fill'
+                                    : 'impact-fill negative-fill'
+                                }
+                                style={{
+                                  width: `${Math.min(
+                                    Math.abs(item.impact) * 12,
+                                    100
+                                  )}%`,
+                                }}
+                              />
+
+                            </div>
+
+
+                            <p>
+                              {getFeatureExplanation(item)}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                      )
+                    )}
+
+                  </div>
+
+                </details>
 
               </div>
+
             ) : (
 
               <div className="empty-state">
@@ -1381,13 +1677,12 @@ function App() {
                 </div>
 
                 <span>
-                  SHAP EXPLANATION
+                  TRANSACTION ASSESSMENT
                 </span>
 
                 <p>
-                  Run a transaction analysis to see which
-                  behavioral signals are driving the model's
-                  decision.
+                  Run a transaction analysis to see the risk level,
+                  recommended action, and the main reasons behind the result.
                 </p>
 
               </div>
@@ -1396,6 +1691,78 @@ function App() {
 
           </div>
 
+        </section>
+
+
+        {/* =========================
+            RISK ANALYTICS
+        ========================= */}
+
+        <section className="analytics-section">
+          <div className="panel analytics-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">OVERVIEW</p>
+                <h3>Risk Analytics</h3>
+              </div>
+
+              <span className="panel-badge">
+                {analytics
+                  ? `${analytics.total_transactions} transactions`
+                  : 'Loading'}
+              </span>
+            </div>
+
+            <div className="analytics-grid">
+              <div className="analytics-stat">
+                <span>Total Transactions</span>
+                <strong>{analytics?.total_transactions ?? '—'}</strong>
+              </div>
+
+              <div className="analytics-stat">
+                <span>Blocked</span>
+                <strong>{analytics?.blocked ?? '—'}</strong>
+              </div>
+
+              <div className="analytics-stat">
+                <span>Review</span>
+                <strong>{analytics?.review ?? '—'}</strong>
+              </div>
+
+              <div className="analytics-stat">
+                <span>Allowed</span>
+                <strong>{analytics?.allowed ?? '—'}</strong>
+              </div>
+            </div>
+
+            <div className="risk-distribution">
+              <div className="risk-distribution-header">
+                <span>RISK DISTRIBUTION</span>
+              </div>
+
+              <div className="risk-distribution-grid">
+                <div>
+                  <span>High</span>
+                  <strong>{analytics?.high_risk ?? '—'}</strong>
+                </div>
+
+                <div>
+                  <span>Medium-High</span>
+                  <strong>{analytics?.medium_high_risk ?? '—'}</strong>
+                </div>
+
+                <div>
+                  <span>Medium</span>
+                  <strong>{analytics?.medium_risk ?? '—'}</strong>
+                </div>
+
+                <div>
+                  <span>Low</span>
+                  <strong>{analytics?.low_risk ?? '—'}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
 

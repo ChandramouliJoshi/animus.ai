@@ -11,7 +11,8 @@ from app.services.fraud_detector import (
 from app.db.database import (
     initialize_database,
     get_transactions,
-    save_transaction
+    save_transaction,
+    get_analytics
 )
 
 
@@ -46,6 +47,9 @@ def root():
 def transactions():
     return get_transactions(limit=10)
 
+@app.get("/analytics")
+def analytics():
+    return get_analytics()
 
 @app.post("/predict")
 def predict(transaction: TransactionRequest):
