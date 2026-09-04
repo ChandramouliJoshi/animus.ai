@@ -17,25 +17,138 @@ def initialize_database():
 
     connection = get_connection()
 
+    # =========================
+    # USERS
+    # =========================
+
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    # =========================
+    # TRANSACTIONS
+    # =========================
+
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
             created_at TEXT NOT NULL,
             amount REAL NOT NULL,
             risk_score REAL NOT NULL,
             risk_score_percentage REAL NOT NULL,
             risk_level TEXT NOT NULL,
-            decision TEXT NOT NULL
+            decision TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """
     )
+
+    # =========================
+    # MIGRATE EXISTING DATABASES
+    # =========================
+
+    columns = connection.execute(
+        """
+        PRAGMA table_info(transactions)
+        """
+    ).fetchall()
+
+    column_names = {
+        column["name"]
+        for column in columns
+    }
+
+    if "user_id" not in column_names:
+        connection.execute(
+            """
+            ALTER TABLE transactions
+            ADD COLUMN user_id INTEGER
+            """
+        )
 
     connection.commit()
     connection.close()
 
 
+# =========================================================
+# USER FUNCTIONS
+# =========================================================
+
+
+def create_user(
+    name: str,
+    email: str,
+    password_hash: str,
+    created_at: str,
+):
+    connection = get_connection()
+
+    cursor = connection.execute(
+        """
+        INSERT INTO users (
+            name,
+            email,
+            password_hash,
+            created_at
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            name,
+            email,
+            password_hash,
+            created_at,
+        ),
+    )
+
+    connection.commit()
+
+    user_id = cursor.lastrowid
+
+    connection.close()
+
+    return user_id
+
+
+def get_user_by_email(email: str):
+    connection = get_connection()
+
+    row = connection.execute(
+        """
+        SELECT
+            id,
+            name,
+            email,
+            password_hash,
+            created_at
+        FROM users
+        WHERE email = ?
+        """,
+        (email,),
+    ).fetchone()
+
+    connection.close()
+
+    return dict(row) if row else None
+
+
+# =========================================================
+# TRANSACTION FUNCTIONS
+# =========================================================
+
+
 def save_transaction(
+    user_id: int,
     created_at: str,
     amount: float,
     risk_score: float,
@@ -48,6 +161,7 @@ def save_transaction(
     cursor = connection.execute(
         """
         INSERT INTO transactions (
+            user_id,
             created_at,
             amount,
             risk_score,
@@ -55,9 +169,10 @@ def save_transaction(
             risk_level,
             decision
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
+            user_id,
             created_at,
             amount,
             risk_score,
@@ -76,7 +191,10 @@ def save_transaction(
     return transaction_id
 
 
-def get_transactions(limit: int = 10):
+def get_transactions(
+    user_id: int,
+    limit: int = 10,
+):
     connection = get_connection()
 
     rows = connection.execute(
@@ -90,80 +208,101 @@ def get_transactions(limit: int = 10):
             risk_level,
             decision
         FROM transactions
+        WHERE user_id = ?
         ORDER BY id DESC
         LIMIT ?
         """,
-        (limit,),
+        (
+            user_id,
+            limit,
+        ),
     ).fetchall()
 
     connection.close()
 
     return [dict(row) for row in rows]
 
-def get_analytics():
+
+def get_analytics(user_id: int):
     connection = get_connection()
 
     total_transactions = connection.execute(
         """
         SELECT COUNT(*) AS count
         FROM transactions
-        """
+        WHERE user_id = ?
+        """,
+        (user_id,),
     ).fetchone()["count"]
 
     blocked = connection.execute(
         """
         SELECT COUNT(*) AS count
         FROM transactions
-        WHERE decision = 'BLOCK'
-        """
+        WHERE user_id = ?
+        AND decision = 'BLOCK'
+        """,
+        (user_id,),
     ).fetchone()["count"]
 
     review = connection.execute(
         """
         SELECT COUNT(*) AS count
         FROM transactions
-        WHERE decision = 'REVIEW'
-        """
+        WHERE user_id = ?
+        AND decision = 'REVIEW'
+        """,
+        (user_id,),
     ).fetchone()["count"]
 
     allowed = connection.execute(
         """
         SELECT COUNT(*) AS count
         FROM transactions
-        WHERE decision = 'ALLOW'
-        """
+        WHERE user_id = ?
+        AND decision = 'ALLOW'
+        """,
+        (user_id,),
     ).fetchone()["count"]
 
     high_risk = connection.execute(
         """
         SELECT COUNT(*) AS count
         FROM transactions
-        WHERE risk_level = 'HIGH'
-        """
+        WHERE user_id = ?
+        AND risk_level = 'HIGH'
+        """,
+        (user_id,),
     ).fetchone()["count"]
 
     medium_high_risk = connection.execute(
         """
         SELECT COUNT(*) AS count
         FROM transactions
-        WHERE risk_level = 'MEDIUM-HIGH'
-        """
+        WHERE user_id = ?
+        AND risk_level = 'MEDIUM-HIGH'
+        """,
+        (user_id,),
     ).fetchone()["count"]
 
     medium_risk = connection.execute(
         """
         SELECT COUNT(*) AS count
         FROM transactions
-        WHERE risk_level = 'MEDIUM'
-        """
+        WHERE user_id = ?
+        AND risk_level = 'MEDIUM'
+        """,
+        (user_id,),
     ).fetchone()["count"]
 
     low_risk = connection.execute(
         """
         SELECT COUNT(*) AS count
         FROM transactions
-        WHERE risk_level = 'LOW'
-        """
+        WHERE user_id = ?
+        AND risk_level = 'LOW'
+        """,
+        (user_id,),
     ).fetchone()["count"]
 
     connection.close()

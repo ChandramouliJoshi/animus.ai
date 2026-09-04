@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import Login from './Login'
+import SignUp from './SignUp'
 
 type Prediction = {
   risk_score: number
@@ -72,42 +74,97 @@ function getFeatureExplanation(item: Prediction['explanations'][number]) {
   switch (item.feature) {
     case 'CUSTOMER_AMOUNT_RATIO':
       return `The transaction amount is ${item.value.toFixed(2)}× the customer's historical average, ${direction}`
+
     case 'CUSTOMER_AMOUNT_DEVIATION':
-      return `The transaction differs from the customer's historical average by ₹${Math.abs(item.value).toLocaleString('en-IN')}, ${direction}`
+      return `The transaction differs from the customer's historical average by ₹${Math.abs(
+        item.value
+      ).toLocaleString('en-IN')}, ${direction}`
+
     case 'CUSTOMER_PREV_AMOUNT':
-      return `The customer's previous transaction amount was ₹${item.value.toLocaleString('en-IN')}, ${direction}`
+      return `The customer's previous transaction amount was ₹${item.value.toLocaleString(
+        'en-IN'
+      )}, ${direction}`
+
     case 'CUSTOMER_AVG_AMOUNT_BEFORE':
-      return `The customer's historical average transaction amount is ₹${item.value.toLocaleString('en-IN')}, ${direction}`
+      return `The customer's historical average transaction amount is ₹${item.value.toLocaleString(
+        'en-IN'
+      )}, ${direction}`
+
     case 'CUSTOMER_TX_COUNT_BEFORE':
-      return `The customer has ${item.value.toLocaleString('en-IN')} previous transactions in the available history, ${direction}`
+      return `The customer has ${item.value.toLocaleString(
+        'en-IN'
+      )} previous transactions in the available history, ${direction}`
+
     case 'CUSTOMER_TX_COUNT_5M':
-      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes, ${direction}`
+      return `The customer made ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 5 minutes, ${direction}`
+
     case 'CUSTOMER_TX_COUNT_1H':
-      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour, ${direction}`
+      return `The customer made ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last hour, ${direction}`
+
     case 'CUSTOMER_TX_COUNT_24H':
-      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours, ${direction}`
+      return `The customer made ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 24 hours, ${direction}`
+
     case 'TERMINAL_AMOUNT_RATIO':
-      return `The transaction amount is ${item.value.toFixed(2)}× the terminal's historical average, ${direction}`
+      return `The transaction amount is ${item.value.toFixed(
+        2
+      )}× the terminal's historical average, ${direction}`
+
     case 'TERMINAL_AMOUNT_DEVIATION':
-      return `The transaction differs from the terminal's historical average by ₹${Math.abs(item.value).toLocaleString('en-IN')}, ${direction}`
+      return `The transaction differs from the terminal's historical average by ₹${Math.abs(
+        item.value
+      ).toLocaleString('en-IN')}, ${direction}`
+
     case 'TERMINAL_AVG_AMOUNT_BEFORE':
-      return `The terminal's historical average transaction amount is ₹${item.value.toLocaleString('en-IN')}, ${direction}`
+      return `The terminal's historical average transaction amount is ₹${item.value.toLocaleString(
+        'en-IN'
+      )}, ${direction}`
+
     case 'TERMINAL_PREV_AMOUNT':
-      return `The terminal's previous transaction amount was ₹${item.value.toLocaleString('en-IN')}, ${direction}`
+      return `The terminal's previous transaction amount was ₹${item.value.toLocaleString(
+        'en-IN'
+      )}, ${direction}`
+
     case 'TERMINAL_TX_COUNT_BEFORE':
-      return `The terminal has ${item.value.toLocaleString('en-IN')} previous transactions in the available history, ${direction}`
+      return `The terminal has ${item.value.toLocaleString(
+        'en-IN'
+      )} previous transactions in the available history, ${direction}`
+
     case 'TERMINAL_TX_COUNT_5M':
-      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes, ${direction}`
+      return `The terminal processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 5 minutes, ${direction}`
+
     case 'TERMINAL_TX_COUNT_1H':
-      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour, ${direction}`
+      return `The terminal processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last hour, ${direction}`
+
     case 'TERMINAL_TX_COUNT_24H':
-      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours, ${direction}`
+      return `The terminal processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 24 hours, ${direction}`
+
     case 'SYSTEM_TX_COUNT_5M':
-      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes, ${direction}`
+      return `The system processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 5 minutes, ${direction}`
+
     case 'SYSTEM_TX_COUNT_1H':
-      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour, ${direction}`
+      return `The system processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last hour, ${direction}`
+
     case 'SYSTEM_TX_COUNT_24H':
-      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours, ${direction}`
+      return `The system processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 24 hours, ${direction}`
+
     default:
       return `${item.description} This factor is ${direction}`
   }
@@ -117,10 +174,13 @@ function getRiskHeadline(riskLevel: string) {
   switch (riskLevel) {
     case 'HIGH':
       return 'High-risk transaction'
+
     case 'MEDIUM-HIGH':
       return 'Elevated-risk transaction'
+
     case 'MEDIUM':
       return 'Moderate-risk transaction'
+
     default:
       return 'Low-risk transaction'
   }
@@ -145,49 +205,115 @@ function getRiskSummary(riskLevel: string, decision: string) {
 function getHumanReason(item: Prediction['explanations'][number]) {
   switch (item.feature) {
     case 'CUSTOMER_AMOUNT_RATIO':
-      return `The transaction amount is ${item.value.toFixed(2)}× the customer's historical average.`
+      return `The transaction amount is ${item.value.toFixed(
+        2
+      )}× the customer's historical average.`
+
     case 'CUSTOMER_AMOUNT_DEVIATION':
-      return `The transaction differs from the customer's historical average by ₹${Math.abs(item.value).toLocaleString('en-IN')}.`
+      return `The transaction differs from the customer's historical average by ₹${Math.abs(
+        item.value
+      ).toLocaleString('en-IN')}.`
+
     case 'CUSTOMER_PREV_AMOUNT':
-      return `The customer's previous transaction amount was ₹${item.value.toLocaleString('en-IN')}.`
+      return `The customer's previous transaction amount was ₹${item.value.toLocaleString(
+        'en-IN'
+      )}.`
+
     case 'CUSTOMER_AVG_AMOUNT_BEFORE':
-      return `The customer's usual transaction amount is around ₹${item.value.toLocaleString('en-IN')}.`
+      return `The customer's usual transaction amount is around ₹${item.value.toLocaleString(
+        'en-IN'
+      )}.`
+
     case 'CUSTOMER_TX_COUNT_BEFORE':
-      return `The customer has ${item.value.toLocaleString('en-IN')} previous transactions in the available history.`
+      return `The customer has ${item.value.toLocaleString(
+        'en-IN'
+      )} previous transactions in the available history.`
+
     case 'CUSTOMER_TX_COUNT_5M':
-      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
+      return `The customer made ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 5 minutes.`
+
     case 'CUSTOMER_TX_COUNT_1H':
-      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour.`
+      return `The customer made ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last hour.`
+
     case 'CUSTOMER_TX_COUNT_24H':
-      return `The customer made ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
+      return `The customer made ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 24 hours.`
+
     case 'TERMINAL_AMOUNT_RATIO':
-      return `The transaction amount is ${item.value.toFixed(2)}× the terminal's historical average.`
+      return `The transaction amount is ${item.value.toFixed(
+        2
+      )}× the terminal's historical average.`
+
     case 'TERMINAL_AMOUNT_DEVIATION':
-      return `The transaction differs from the terminal's historical average by ₹${Math.abs(item.value).toLocaleString('en-IN')}.`
+      return `The transaction differs from the terminal's historical average by ₹${Math.abs(
+        item.value
+      ).toLocaleString('en-IN')}.`
+
     case 'TERMINAL_AVG_AMOUNT_BEFORE':
-      return `The terminal's usual transaction amount is around ₹${item.value.toLocaleString('en-IN')}.`
+      return `The terminal's usual transaction amount is around ₹${item.value.toLocaleString(
+        'en-IN'
+      )}.`
+
     case 'TERMINAL_PREV_AMOUNT':
-      return `The terminal's previous transaction amount was ₹${item.value.toLocaleString('en-IN')}.`
+      return `The terminal's previous transaction amount was ₹${item.value.toLocaleString(
+        'en-IN'
+      )}.`
+
     case 'TERMINAL_TX_COUNT_BEFORE':
-      return `The terminal has processed ${item.value.toLocaleString('en-IN')} previous transactions in the available history.`
+      return `The terminal has processed ${item.value.toLocaleString(
+        'en-IN'
+      )} previous transactions in the available history.`
+
     case 'TERMINAL_TX_COUNT_5M':
-      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
+      return `The terminal processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 5 minutes.`
+
     case 'TERMINAL_TX_COUNT_1H':
-      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour.`
+      return `The terminal processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last hour.`
+
     case 'TERMINAL_TX_COUNT_24H':
-      return `The terminal processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
+      return `The terminal processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 24 hours.`
+
     case 'SYSTEM_TX_COUNT_5M':
-      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
+      return `The system processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 5 minutes.`
+
     case 'SYSTEM_TX_COUNT_1H':
-      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last hour.`
+      return `The system processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last hour.`
+
     case 'SYSTEM_TX_COUNT_24H':
-      return `The system processed ${item.value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
+      return `The system processed ${item.value.toLocaleString(
+        'en-IN'
+      )} transaction(s) in the last 24 hours.`
+
     default:
       return item.description
   }
 }
 
-function App() {
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
+function Dashboard({
+  onLogout,
+}: {
+  onLogout: () => void
+}) {
   const [amount, setAmount] = useState('')
   const [hour, setHour] = useState('')
   const [day, setDay] = useState('')
@@ -227,16 +353,33 @@ function App() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-    async function loadHistory() {
+
+  function getAuthHeaders(includeJson = false): HeadersInit {
+    const token = localStorage.getItem('animus_token')
+
+    return {
+      ...(includeJson
+        ? { 'Content-Type': 'application/json' }
+        : {}),
+      ...(token
+        ? { Authorization: `Bearer ${token}` }
+        : {}),
+    }
+  }
+
+  async function loadHistory() {
     try {
       const response = await fetch(
-        'http://127.0.0.1:8000/transactions'
+        'http://127.0.0.1:8000/transactions',
+        {
+          headers: getAuthHeaders(),
+        }
       )
 
       if (!response.ok) {
         throw new Error('Failed to load transaction history')
       }
-    
+
       const data = await response.json()
 
       const formattedHistory: HistoryItem[] = data.map(
@@ -249,13 +392,12 @@ function App() {
           decision: string
         }) => ({
           id: item.id,
-          timestamp: new Date(item.created_at).toLocaleTimeString(
-            'en-IN',
-            {
-              hour: '2-digit',
-              minute: '2-digit',
-            }
-          ),
+          timestamp: new Date(
+            item.created_at
+          ).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
           amount: item.amount,
           riskScorePercentage: item.risk_score_percentage,
           riskLevel: item.risk_level,
@@ -265,19 +407,20 @@ function App() {
 
       setHistory(formattedHistory)
     } catch (err) {
-      console.error('Could not load transaction history:', err)
+      console.error(
+        'Could not load transaction history:',
+        err
+      )
     }
   }
-
-  useEffect(() => {
-    loadHistory()
-    loadAnalytics()
-  }, [])
 
   async function loadAnalytics() {
     try {
       const response = await fetch(
-        'http://127.0.0.1:8000/analytics'
+        'http://127.0.0.1:8000/analytics',
+        {
+          headers: getAuthHeaders(),
+        }
       )
 
       if (!response.ok) {
@@ -288,9 +431,17 @@ function App() {
 
       setAnalytics(data)
     } catch (err) {
-      console.error('Could not load analytics:', err)
+      console.error(
+        'Could not load analytics:',
+        err
+      )
     }
   }
+
+  useEffect(() => {
+    loadHistory()
+    loadAnalytics()
+  }, [])
 
   // =========================
   // DEMO SCENARIOS
@@ -383,7 +534,6 @@ function App() {
       setSystemTx24h('25000')
     }
 
-    // Scenario changed, so clear previous result.
     setPrediction(null)
     setError('')
   }
@@ -399,10 +549,22 @@ function App() {
       { value: amount, label: 'Transaction Amount' },
       { value: hour, label: 'Transaction Hour' },
       { value: day, label: 'Day of Week' },
-      { value: customerPrevAmount, label: 'Previous Customer Amount' },
-      { value: customerTxBefore, label: 'Customer Transactions Before' },
-      { value: customerAvgAmount, label: 'Customer Historical Average' },
-      { value: customerHasHistory, label: 'Customer History' },
+      {
+        value: customerPrevAmount,
+        label: 'Previous Customer Amount',
+      },
+      {
+        value: customerTxBefore,
+        label: 'Customer Transactions Before',
+      },
+      {
+        value: customerAvgAmount,
+        label: 'Customer Historical Average',
+      },
+      {
+        value: customerHasHistory,
+        label: 'Customer History',
+      },
     ]
 
     const missingFields = requiredFields
@@ -410,7 +572,9 @@ function App() {
       .map((field) => field.label)
 
     if (missingFields.length > 0) {
-      setError('Please fill in all required fields before analyzing the transaction.')
+      setError(
+        'Please fill in all required fields before analyzing the transaction.'
+      )
       return
     }
 
@@ -441,7 +605,9 @@ function App() {
       TX_HOUR: Number(hour),
       TX_DAY_OF_WEEK: Number(day),
 
-      CUSTOMER_TIME_SINCE_PREV: Number(customerTimeSincePrev),
+      CUSTOMER_TIME_SINCE_PREV: Number(
+        customerTimeSincePrev
+      ),
       CUSTOMER_PREV_AMOUNT: Number(customerPrevAmount),
       CUSTOMER_TX_COUNT_BEFORE: Number(customerTxBefore),
       CUSTOMER_TX_COUNT_5M: Number(customerTx5m),
@@ -452,9 +618,13 @@ function App() {
       CUSTOMER_AMOUNT_RATIO: customerRatio,
       CUSTOMER_HAS_HISTORY: Number(customerHasHistory),
 
-      TERMINAL_TIME_SINCE_PREV: Number(terminalTimeSincePrev),
+      TERMINAL_TIME_SINCE_PREV: Number(
+        terminalTimeSincePrev
+      ),
       TERMINAL_PREV_AMOUNT: Number(terminalPrevAmount),
-      TERMINAL_TX_COUNT_BEFORE: Number(terminalTxBefore),
+      TERMINAL_TX_COUNT_BEFORE: Number(
+        terminalTxBefore
+      ),
       TERMINAL_TX_COUNT_5M: Number(terminalTx5m),
       TERMINAL_TX_COUNT_1H: Number(terminalTx1h),
       TERMINAL_TX_COUNT_24H: Number(terminalTx24h),
@@ -473,9 +643,7 @@ function App() {
         'http://127.0.0.1:8000/predict',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(true),
           body: JSON.stringify(transaction),
         }
       )
@@ -501,13 +669,18 @@ function App() {
         )
       }
 
-      console.error('Transaction analysis failed:', err)
+      console.error(
+        'Transaction analysis failed:',
+        err
+      )
     } finally {
       setLoading(false)
     }
   }
 
-  const formattedAmount = Number(amount || 0).toLocaleString('en-IN')
+  const formattedAmount = Number(
+    amount || 0
+  ).toLocaleString('en-IN')
 
   return (
     <div className="app">
@@ -519,12 +692,24 @@ function App() {
       <header className="topbar">
         <div className="brand">
           <h1>Animus AI</h1>
-          <p>AI-powered fraud detection &amp; risk management</p>
+          <p>
+            AI-powered fraud detection &amp; risk management
+          </p>
         </div>
 
-        <div className="status">
-          <span className="status-dot"></span>
-          API Online
+        <div className="topbar-actions">
+          <div className="status">
+            <span className="status-dot"></span>
+            API Online
+          </div>
+
+          <button
+            type="button"
+            className="logout-button"
+            onClick={onLogout}
+          >
+            Logout
+          </button>
         </div>
       </header>
 
@@ -541,8 +726,9 @@ function App() {
           <h2>Transaction Risk Dashboard</h2>
 
           <p>
-            Analyze a transaction, evaluate its fraud risk, and understand
-            what signals influenced the model's decision.
+            Analyze a transaction, evaluate its fraud risk,
+            and understand what signals influenced the model's
+            decision.
           </p>
         </section>
 
@@ -555,11 +741,14 @@ function App() {
 
           <div className="card risk-score-card">
             <div className="card-top">
-              <span className="card-label">Risk Score</span>
+              <span className="card-label">
+                Risk Score
+              </span>
 
               {prediction && (
                 <span className="card-meta">
-                  Threshold {prediction.threshold_percentage}%
+                  Threshold{' '}
+                  {prediction.threshold_percentage}%
                 </span>
               )}
             </div>
@@ -594,7 +783,9 @@ function App() {
 
           <div className="card">
             <div className="card-top">
-              <span className="card-label">Decision</span>
+              <span className="card-label">
+                Decision
+              </span>
             </div>
 
             <strong
@@ -604,7 +795,9 @@ function App() {
                   : ''
               }
             >
-              {prediction ? prediction.decision : '—'}
+              {prediction
+                ? prediction.decision
+                : '—'}
             </strong>
 
             <small>
@@ -617,7 +810,9 @@ function App() {
 
           <div className="card">
             <div className="card-top">
-              <span className="card-label">Risk Level</span>
+              <span className="card-label">
+                Risk Level
+              </span>
             </div>
 
             <strong
@@ -629,7 +824,9 @@ function App() {
                   : ''
               }
             >
-              {prediction ? prediction.risk_level : '—'}
+              {prediction
+                ? prediction.risk_level
+                : '—'}
             </strong>
 
             <small>
@@ -656,7 +853,10 @@ function App() {
 
             <div className="panel-header">
               <div>
-                <p className="eyebrow">TRANSACTION ANALYSIS</p>
+                <p className="eyebrow">
+                  TRANSACTION ANALYSIS
+                </p>
+
                 <h3>Score a Transaction</h3>
               </div>
 
@@ -676,7 +876,9 @@ function App() {
                 <div className="demo-header">
                   <div>
                     <span>QUICK DEMO</span>
-                    <p>Load a transaction scenario</p>
+                    <p>
+                      Load a transaction scenario
+                    </p>
                   </div>
                 </div>
 
@@ -722,11 +924,15 @@ function App() {
 
               <div className="form-section-heading">
                 <div>
-                  <span className="section-number">01</span>
+                  <span className="section-number">
+                    01
+                  </span>
 
                   <div>
                     <h4>Transaction</h4>
-                    <p>Basic transaction context</p>
+                    <p>
+                      Basic transaction context
+                    </p>
                   </div>
                 </div>
               </div>
@@ -783,20 +989,47 @@ function App() {
                   </label>
 
                   <select
-                    id="day" required
+                    id="day"
+                    required
                     value={day}
                     onChange={(event) =>
                       setDay(event.target.value)
                     }
                   >
-                    <option value="" disabled>Select day</option>
-                    <option value="0">Monday</option>
-                    <option value="1">Tuesday</option>
-                    <option value="2">Wednesday</option>
-                    <option value="3">Thursday</option>
-                    <option value="4">Friday</option>
-                    <option value="5">Saturday</option>
-                    <option value="6">Sunday</option>
+                    <option
+                      value=""
+                      disabled
+                    >
+                      Select day
+                    </option>
+
+                    <option value="0">
+                      Monday
+                    </option>
+
+                    <option value="1">
+                      Tuesday
+                    </option>
+
+                    <option value="2">
+                      Wednesday
+                    </option>
+
+                    <option value="3">
+                      Thursday
+                    </option>
+
+                    <option value="4">
+                      Friday
+                    </option>
+
+                    <option value="5">
+                      Saturday
+                    </option>
+
+                    <option value="6">
+                      Sunday
+                    </option>
                   </select>
                 </div>
 
@@ -809,12 +1042,16 @@ function App() {
 
               <div className="form-section-heading customer-heading">
                 <div>
-                  <span className="section-number">02</span>
+                  <span className="section-number">
+                    02
+                  </span>
 
                   <div>
                     <h4>Customer Behavior</h4>
+
                     <p>
-                      Compare this transaction with customer history
+                      Compare this transaction with
+                      customer history
                     </p>
                   </div>
                 </div>
@@ -900,7 +1137,8 @@ function App() {
                   </label>
 
                   <select
-                    id="customer-history" required
+                    id="customer-history"
+                    required
                     value={customerHasHistory}
                     onChange={(event) =>
                       setCustomerHasHistory(
@@ -908,9 +1146,20 @@ function App() {
                       )
                     }
                   >
-                    <option value="" disabled>Select history</option>
-                    <option value="0">No History</option>
-                    <option value="1">Has History</option>
+                    <option
+                      value=""
+                      disabled
+                    >
+                      Select history
+                    </option>
+
+                    <option value="0">
+                      No History
+                    </option>
+
+                    <option value="1">
+                      Has History
+                    </option>
                   </select>
                 </div>
 
@@ -925,9 +1174,12 @@ function App() {
                   <span>Amount deviation</span>
 
                   <strong>
-                    ₹{(
+                    ₹
+                    {(
                       Number(amount || 0) -
-                      Number(customerAvgAmount || 0)
+                      Number(
+                        customerAvgAmount || 0
+                      )
                     ).toLocaleString('en-IN')}
                   </strong>
                 </div>
@@ -993,7 +1245,9 @@ function App() {
                         id="customer-time"
                         type="number"
                         min="0"
-                        value={customerTimeSincePrev}
+                        value={
+                          customerTimeSincePrev
+                        }
                         onChange={(event) =>
                           setCustomerTimeSincePrev(
                             event.target.value
@@ -1116,7 +1370,9 @@ function App() {
                         id="terminal-time"
                         type="number"
                         min="0"
-                        value={terminalTimeSincePrev}
+                        value={
+                          terminalTimeSincePrev
+                        }
                         onChange={(event) =>
                           setTerminalTimeSincePrev(
                             event.target.value
@@ -1288,9 +1544,10 @@ function App() {
 
 
                   <div className="derived-info">
-                    Terminal deviation and ratio are calculated
-                    automatically from the transaction amount and
-                    terminal average.
+                    Terminal deviation and ratio are
+                    calculated automatically from the
+                    transaction amount and terminal
+                    average.
                   </div>
 
                 </div>
@@ -1422,7 +1679,10 @@ function App() {
                 >
                   {loading ? (
                     <>
-                      <span className="button-spinner" aria-hidden="true" />
+                      <span
+                        className="button-spinner"
+                        aria-hidden="true"
+                      />
                       Analyzing transaction...
                     </>
                   ) : (
@@ -1461,8 +1721,18 @@ function App() {
                 </h3>
               </div>
 
-              <span className={`panel-badge ${prediction ? `result-badge-${prediction.risk_level.toLowerCase().replace('-', '')}` : ''}`}>
-                {prediction ? prediction.risk_level : 'READY'}
+              <span
+                className={`panel-badge ${
+                  prediction
+                    ? `result-badge-${prediction.risk_level
+                        .toLowerCase()
+                        .replace('-', '')}`
+                    : ''
+                }`}
+              >
+                {prediction
+                  ? prediction.risk_level
+                  : 'READY'}
               </span>
 
             </div>
@@ -1480,19 +1750,29 @@ function App() {
                   <span className="assessment-status-dot" />
 
                   <div>
-                    <span>RISK ASSESSMENT</span>
+                    <span>
+                      RISK ASSESSMENT
+                    </span>
+
                     <strong>
-                      {getRiskHeadline(prediction.risk_level)}
+                      {getRiskHeadline(
+                        prediction.risk_level
+                      )}
                     </strong>
                   </div>
                 </div>
 
 
                 <div className="assessment-amount">
-                  <span>TRANSACTION</span>
+                  <span>
+                    TRANSACTION
+                  </span>
 
                   <strong>
-                    ₹{Number(amount).toLocaleString('en-IN')}
+                    ₹
+                    {Number(
+                      amount
+                    ).toLocaleString('en-IN')}
                   </strong>
                 </div>
 
@@ -1504,9 +1784,15 @@ function App() {
                       prediction.decision
                     )}
                   </p>
+
                   <div className="assessment-score">
-                    <span>RISK SCORE</span>
-                    <strong>{prediction.risk_score_percentage}%</strong>
+                    <span>
+                      RISK SCORE
+                    </span>
+
+                    <strong>
+                      {prediction.risk_score_percentage}%
+                    </strong>
                   </div>
                 </div>
 
@@ -1514,16 +1800,23 @@ function App() {
                 <div className="assessment-action">
 
                   <div>
-                    <span>RECOMMENDED ACTION</span>
-                    <strong>{prediction.decision}</strong>
+                    <span>
+                      RECOMMENDED ACTION
+                    </span>
+
+                    <strong>
+                      {prediction.decision}
+                    </strong>
                   </div>
 
                   <span
                     className={`assessment-action-badge action-${prediction.decision.toLowerCase()}`}
                   >
-                    {prediction.decision === 'BLOCK'
+                    {prediction.decision ===
+                    'BLOCK'
                       ? 'Stop transaction'
-                      : prediction.decision === 'REVIEW'
+                      : prediction.decision ===
+                        'REVIEW'
                         ? 'Needs review'
                         : 'Proceed'}
                   </span>
@@ -1534,10 +1827,13 @@ function App() {
                 <div className="assessment-reasons">
 
                   <div className="assessment-section-label">
-                    <span>WHY THIS RESULT?</span>
+                    <span>
+                      WHY THIS RESULT?
+                    </span>
 
                     <p>
-                      The strongest signals influencing the risk assessment.
+                      The strongest signals influencing
+                      the risk assessment.
                     </p>
                   </div>
 
@@ -1553,19 +1849,23 @@ function App() {
 
                         <div
                           className={`assessment-reason-icon ${
-                            item.direction === 'increases_risk'
+                            item.direction ===
+                            'increases_risk'
                               ? 'reason-up'
                               : 'reason-down'
                           }`}
                         >
-                          {item.direction === 'increases_risk'
+                          {item.direction ===
+                          'increases_risk'
                             ? '↑'
                             : '↓'}
                         </div>
 
                         <div>
                           <strong>
-                            {getFeatureLabel(item.feature)}
+                            {getFeatureLabel(
+                              item.feature
+                            )}
                           </strong>
 
                           <p>
@@ -1613,7 +1913,9 @@ function App() {
                             <div className="explanation-top">
 
                               <strong>
-                                {getFeatureLabel(item.feature)}
+                                {getFeatureLabel(
+                                  item.feature
+                                )}
                               </strong>
 
                               <span
@@ -1624,7 +1926,9 @@ function App() {
                                     : 'impact negative'
                                 }
                               >
-                                {item.impact > 0 ? '+' : ''}
+                                {item.impact > 0
+                                  ? '+'
+                                  : ''}
                                 {item.impact.toFixed(3)}
                               </span>
 
@@ -1642,7 +1946,9 @@ function App() {
                                 }
                                 style={{
                                   width: `${Math.min(
-                                    Math.abs(item.impact) * 12,
+                                    Math.abs(
+                                      item.impact
+                                    ) * 12,
                                     100
                                   )}%`,
                                 }}
@@ -1652,7 +1958,9 @@ function App() {
 
 
                             <p>
-                              {getFeatureExplanation(item)}
+                              {getFeatureExplanation(
+                                item
+                              )}
                             </p>
 
                           </div>
@@ -1681,8 +1989,9 @@ function App() {
                 </span>
 
                 <p>
-                  Run a transaction analysis to see the risk level,
-                  recommended action, and the main reasons behind the result.
+                  Run a transaction analysis to see
+                  the risk level, recommended action,
+                  and the main reasons behind the result.
                 </p>
 
               </div>
@@ -1699,11 +2008,19 @@ function App() {
         ========================= */}
 
         <section className="analytics-section">
+
           <div className="panel analytics-panel">
+
             <div className="panel-header">
+
               <div>
-                <p className="eyebrow">OVERVIEW</p>
-                <h3>Risk Analytics</h3>
+                <p className="eyebrow">
+                  OVERVIEW
+                </p>
+
+                <h3>
+                  Risk Analytics
+                </h3>
               </div>
 
               <span className="panel-badge">
@@ -1711,58 +2028,120 @@ function App() {
                   ? `${analytics.total_transactions} transactions`
                   : 'Loading'}
               </span>
+
             </div>
+
 
             <div className="analytics-grid">
-              <div className="analytics-stat">
-                <span>Total Transactions</span>
-                <strong>{analytics?.total_transactions ?? '—'}</strong>
-              </div>
 
               <div className="analytics-stat">
-                <span>Blocked</span>
-                <strong>{analytics?.blocked ?? '—'}</strong>
+                <span>
+                  Total Transactions
+                </span>
+
+                <strong>
+                  {analytics?.total_transactions ??
+                    '—'}
+                </strong>
               </div>
 
-              <div className="analytics-stat">
-                <span>Review</span>
-                <strong>{analytics?.review ?? '—'}</strong>
-              </div>
 
               <div className="analytics-stat">
-                <span>Allowed</span>
-                <strong>{analytics?.allowed ?? '—'}</strong>
+                <span>
+                  Blocked
+                </span>
+
+                <strong>
+                  {analytics?.blocked ?? '—'}
+                </strong>
               </div>
+
+
+              <div className="analytics-stat">
+                <span>
+                  Review
+                </span>
+
+                <strong>
+                  {analytics?.review ?? '—'}
+                </strong>
+              </div>
+
+
+              <div className="analytics-stat">
+                <span>
+                  Allowed
+                </span>
+
+                <strong>
+                  {analytics?.allowed ?? '—'}
+                </strong>
+              </div>
+
             </div>
+
 
             <div className="risk-distribution">
+
               <div className="risk-distribution-header">
-                <span>RISK DISTRIBUTION</span>
+                <span>
+                  RISK DISTRIBUTION
+                </span>
               </div>
+
 
               <div className="risk-distribution-grid">
-                <div>
-                  <span>High</span>
-                  <strong>{analytics?.high_risk ?? '—'}</strong>
-                </div>
 
                 <div>
-                  <span>Medium-High</span>
-                  <strong>{analytics?.medium_high_risk ?? '—'}</strong>
+                  <span>
+                    High
+                  </span>
+
+                  <strong>
+                    {analytics?.high_risk ?? '—'}
+                  </strong>
                 </div>
 
-                <div>
-                  <span>Medium</span>
-                  <strong>{analytics?.medium_risk ?? '—'}</strong>
-                </div>
 
                 <div>
-                  <span>Low</span>
-                  <strong>{analytics?.low_risk ?? '—'}</strong>
+                  <span>
+                    Medium-High
+                  </span>
+
+                  <strong>
+                    {analytics?.medium_high_risk ??
+                      '—'}
+                  </strong>
                 </div>
+
+
+                <div>
+                  <span>
+                    Medium
+                  </span>
+
+                  <strong>
+                    {analytics?.medium_risk ?? '—'}
+                  </strong>
+                </div>
+
+
+                <div>
+                  <span>
+                    Low
+                  </span>
+
+                  <strong>
+                    {analytics?.low_risk ?? '—'}
+                  </strong>
+                </div>
+
               </div>
+
             </div>
+
           </div>
+
         </section>
 
 
@@ -1777,12 +2156,20 @@ function App() {
             <div className="panel-header">
 
               <div>
-                <p className="eyebrow">ACTIVITY</p>
-                <h3>Transaction History</h3>
+                <p className="eyebrow">
+                  ACTIVITY
+                </p>
+
+                <h3>
+                  Transaction History
+                </h3>
               </div>
 
               <span className="panel-badge">
-                {history.length} {history.length === 1 ? 'transaction' : 'transactions'}
+                {history.length}{' '}
+                {history.length === 1
+                  ? 'transaction'
+                  : 'transactions'}
               </span>
 
             </div>
@@ -1796,13 +2183,28 @@ function App() {
 
                   <thead>
                     <tr>
-                      <th>Time</th>
-                      <th>Amount</th>
-                      <th>Risk Score</th>
-                      <th>Risk Level</th>
-                      <th>Decision</th>
+                      <th>
+                        Time
+                      </th>
+
+                      <th>
+                        Amount
+                      </th>
+
+                      <th>
+                        Risk Score
+                      </th>
+
+                      <th>
+                        Risk Level
+                      </th>
+
+                      <th>
+                        Decision
+                      </th>
                     </tr>
                   </thead>
+
 
                   <tbody>
 
@@ -1814,9 +2216,14 @@ function App() {
                           {item.timestamp}
                         </td>
 
+
                         <td className="history-amount">
-                          ₹{item.amount.toLocaleString('en-IN')}
+                          ₹
+                          {item.amount.toLocaleString(
+                            'en-IN'
+                          )}
                         </td>
+
 
                         <td>
 
@@ -1827,6 +2234,7 @@ function App() {
                             </span>
 
                             <div className="history-risk-track">
+
                               <div
                                 className="history-risk-fill"
                                 style={{
@@ -1836,13 +2244,16 @@ function App() {
                                   )}%`,
                                 }}
                               />
+
                             </div>
 
                           </div>
 
                         </td>
 
+
                         <td>
+
                           <span
                             className={`history-risk-level risk-${item.riskLevel
                               .toLowerCase()
@@ -1850,14 +2261,18 @@ function App() {
                           >
                             {item.riskLevel}
                           </span>
+
                         </td>
 
+
                         <td>
+
                           <span
                             className={`history-decision decision-${item.decision.toLowerCase()}`}
                           >
                             {item.decision}
                           </span>
+
                         </td>
 
                       </tr>
@@ -1879,11 +2294,13 @@ function App() {
                 </div>
 
                 <div>
-                  <strong>No transactions yet</strong>
+                  <strong>
+                    No transactions yet
+                  </strong>
 
                   <p>
-                    Analyze a transaction to start building your
-                    activity history.
+                    Analyze a transaction to start
+                    building your activity history.
                   </p>
                 </div>
 
@@ -1895,10 +2312,135 @@ function App() {
 
         </section>
 
-
       </main>
 
     </div>
+  )
+}
+
+
+/* =========================================================
+   AUTHENTICATION
+   ========================================================= */
+
+function App() {
+  const [authenticated, setAuthenticated] = useState(false)
+
+  function handleLogout() {
+    localStorage.removeItem('animus_token')
+    localStorage.removeItem('animus_user')
+    setAuthenticated(false)
+  }
+
+  const [authChecking, setAuthChecking] = useState(true)
+
+  const [authScreen, setAuthScreen] =
+    useState<'login' | 'signup'>('login')
+
+  useEffect(() => {
+    async function validateToken() {
+      const token = localStorage.getItem('animus_token')
+
+      if (!token) {
+        setAuthChecking(false)
+        return
+      }
+
+      try {
+        const response = await fetch(
+          'http://127.0.0.1:8000/auth/me',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+
+        if (!response.ok) {
+          localStorage.removeItem('animus_token')
+          localStorage.removeItem('animus_user')
+          setAuthenticated(false)
+          return
+        }
+
+        const user = await response.json()
+
+        const storedUser = localStorage.getItem('animus_user')
+
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser)
+
+          localStorage.setItem(
+            'animus_user',
+            JSON.stringify({
+              ...parsedUser,
+              user_id: user.user_id,
+              email: user.email,
+            })
+          )
+        }
+
+        setAuthenticated(true)
+      } catch (error) {
+        console.error(
+          'Could not validate authentication:',
+          error
+        )
+
+        localStorage.removeItem('animus_token')
+        localStorage.removeItem('animus_user')
+        setAuthenticated(false)
+      } finally {
+        setAuthChecking(false)
+      }
+    }
+
+    validateToken()
+  }, [])
+
+  if (authChecking) {
+    return (
+      <div className="app">
+        <main className="dashboard">
+          <section className="welcome">
+            <p className="eyebrow">AUTHENTICATION</p>
+
+            <h2>
+              Checking your session...
+            </h2>
+
+            <p>
+              Verifying your Animus AI session.
+            </p>
+          </section>
+        </main>
+      </div>
+    )
+  }
+
+  if (authenticated) {
+    return <Dashboard onLogout={handleLogout} />
+  }
+
+  if (authScreen === 'signup') {
+    return (
+      <SignUp
+        onBackToLogin={() =>
+          setAuthScreen('login')
+        }
+      />
+    )
+  }
+
+  return (
+    <Login
+      onLogin={() =>
+        setAuthenticated(true)
+      }
+      onSignUp={() =>
+        setAuthScreen('signup')
+      }
+    />
   )
 }
 
