@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import Login from './Login'
 import SignUp from './SignUp'
+import LandingPage from './LandingPage'
+import ForgotPassword from './ForgotPassword'
 
 type Prediction = {
   risk_score: number
@@ -14,8 +16,9 @@ type Prediction = {
   explanations: {
     feature: string
     value: number
+    value_display?: string
     impact: number
-    direction: string
+    direction: 'increases_risk' | 'reduces_risk' | 'neutral'
     description: string
   }[]
 }
@@ -38,24 +41,42 @@ type Analytics = {
   medium_high_risk: number
   medium_risk: number
   low_risk: number
+  total_value: number
+  blocked_value: number
+  review_value: number
+  flagged_value: number
+  flagged_transactions: number
+  flagged_rate: number
+  flagged_value_percentage: number
 }
 
 const FEATURE_LABELS: Record<string, string> = {
-  CUSTOMER_AMOUNT_RATIO: 'Transaction amount vs customer history',
+  TX_AMOUNT: 'Transaction amount',
+  TX_HOUR: 'Transaction hour',
+  TX_DAY_OF_WEEK: 'Transaction day of week',
+
+  CUSTOMER_TIME_SINCE_PREV: 'Time since customer transaction',
   CUSTOMER_PREV_AMOUNT: 'Previous customer transaction',
-  CUSTOMER_AMOUNT_DEVIATION: 'Difference from customer average',
-  CUSTOMER_AVG_AMOUNT_BEFORE: 'Customer historical average',
   CUSTOMER_TX_COUNT_BEFORE: 'Customer transaction history',
   CUSTOMER_TX_COUNT_5M: 'Customer activity · 5 min',
   CUSTOMER_TX_COUNT_1H: 'Customer activity · 1 hour',
   CUSTOMER_TX_COUNT_24H: 'Customer activity · 24 hours',
-  TERMINAL_AMOUNT_RATIO: 'Transaction amount vs terminal history',
-  TERMINAL_AMOUNT_DEVIATION: 'Difference from terminal average',
-  TERMINAL_AVG_AMOUNT_BEFORE: 'Terminal historical average',
+  CUSTOMER_AVG_AMOUNT_BEFORE: 'Customer historical average',
+  CUSTOMER_AMOUNT_DEVIATION: 'Difference from customer average',
+  CUSTOMER_AMOUNT_RATIO: 'Transaction amount vs customer history',
+  CUSTOMER_HAS_HISTORY: 'Customer history available',
+
+  TERMINAL_TIME_SINCE_PREV: 'Time since terminal transaction',
+  TERMINAL_PREV_AMOUNT: 'Previous terminal transaction',
   TERMINAL_TX_COUNT_BEFORE: 'Terminal transaction history',
   TERMINAL_TX_COUNT_5M: 'Terminal activity · 5 min',
   TERMINAL_TX_COUNT_1H: 'Terminal activity · 1 hour',
   TERMINAL_TX_COUNT_24H: 'Terminal activity · 24 hours',
+  TERMINAL_AVG_AMOUNT_BEFORE: 'Terminal historical average',
+  TERMINAL_AMOUNT_DEVIATION: 'Difference from terminal average',
+  TERMINAL_AMOUNT_RATIO: 'Transaction amount vs terminal history',
+  TERMINAL_HAS_HISTORY: 'Terminal history available',
+
   SYSTEM_TX_COUNT_5M: 'System activity · 5 min',
   SYSTEM_TX_COUNT_1H: 'System activity · 1 hour',
   SYSTEM_TX_COUNT_24H: 'System activity · 24 hours',
@@ -69,7 +90,9 @@ function getFeatureExplanation(item: Prediction['explanations'][number]) {
   const direction =
     item.direction === 'increases_risk'
       ? 'contributing to higher model risk.'
-      : 'contributing to lower model risk.'
+      : item.direction === 'reduces_risk'
+        ? 'contributing to lower model risk.'
+        : 'having negligible influence on model risk.'
 
   switch (item.feature) {
     case 'CUSTOMER_AMOUNT_RATIO':
@@ -203,106 +226,114 @@ function getRiskSummary(riskLevel: string, decision: string) {
 }
 
 function getHumanReason(item: Prediction['explanations'][number]) {
+  const value = item.value
+
   switch (item.feature) {
+    case 'TX_AMOUNT':
+      return `The transaction amount is ₹${value.toLocaleString('en-IN')}.`
+
+    case 'TX_HOUR':
+      return `The transaction occurred around ${value.toFixed(0)}:00.`
+
+    case 'TX_DAY_OF_WEEK': {
+      const days = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ]
+      return `The transaction occurred on ${days[Math.round(value)] ?? 'an unspecified day'}.`
+    }
+
+    case 'CUSTOMER_TIME_SINCE_PREV':
+      return `The customer's previous transaction was ${value.toLocaleString('en-IN')} seconds earlier.`
+
     case 'CUSTOMER_AMOUNT_RATIO':
-      return `The transaction amount is ${item.value.toFixed(
-        2
-      )}× the customer's historical average.`
+      return `The transaction amount is ${value.toFixed(2)}× the customer's historical average.`
 
     case 'CUSTOMER_AMOUNT_DEVIATION':
-      return `The transaction differs from the customer's historical average by ₹${Math.abs(
-        item.value
-      ).toLocaleString('en-IN')}.`
+      return `The transaction differs from the customer's historical average by ₹${Math.abs(value).toLocaleString('en-IN')}.`
 
     case 'CUSTOMER_PREV_AMOUNT':
-      return `The customer's previous transaction amount was ₹${item.value.toLocaleString(
-        'en-IN'
-      )}.`
+      return `The customer's previous transaction amount was ₹${value.toLocaleString('en-IN')}.`
 
     case 'CUSTOMER_AVG_AMOUNT_BEFORE':
-      return `The customer's usual transaction amount is around ₹${item.value.toLocaleString(
-        'en-IN'
-      )}.`
+      return `The customer's usual transaction amount is around ₹${value.toLocaleString('en-IN')}.`
 
     case 'CUSTOMER_TX_COUNT_BEFORE':
-      return `The customer has ${item.value.toLocaleString(
-        'en-IN'
-      )} previous transactions in the available history.`
+      return `The customer has ${value.toLocaleString('en-IN')} previous transactions in the available history.`
 
     case 'CUSTOMER_TX_COUNT_5M':
-      return `The customer made ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last 5 minutes.`
+      return `The customer made ${value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
 
     case 'CUSTOMER_TX_COUNT_1H':
-      return `The customer made ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last hour.`
+      return `The customer made ${value.toLocaleString('en-IN')} transaction(s) in the last hour.`
 
     case 'CUSTOMER_TX_COUNT_24H':
-      return `The customer made ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last 24 hours.`
+      return `The customer made ${value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
+
+    case 'CUSTOMER_HAS_HISTORY':
+      return value > 0
+        ? 'The customer has historical transaction activity available for comparison.'
+        : 'No prior customer history is available for comparison.'
+
+    case 'TERMINAL_TIME_SINCE_PREV':
+      return `The terminal's previous transaction was ${value.toLocaleString('en-IN')} seconds earlier.`
 
     case 'TERMINAL_AMOUNT_RATIO':
-      return `The transaction amount is ${item.value.toFixed(
-        2
-      )}× the terminal's historical average.`
+      return `The transaction amount is ${value.toFixed(2)}× the terminal's historical average.`
 
     case 'TERMINAL_AMOUNT_DEVIATION':
-      return `The transaction differs from the terminal's historical average by ₹${Math.abs(
-        item.value
-      ).toLocaleString('en-IN')}.`
+      return `The transaction differs from the terminal's historical average by ₹${Math.abs(value).toLocaleString('en-IN')}.`
 
     case 'TERMINAL_AVG_AMOUNT_BEFORE':
-      return `The terminal's usual transaction amount is around ₹${item.value.toLocaleString(
-        'en-IN'
-      )}.`
+      return `The terminal's usual transaction amount is around ₹${value.toLocaleString('en-IN')}.`
 
     case 'TERMINAL_PREV_AMOUNT':
-      return `The terminal's previous transaction amount was ₹${item.value.toLocaleString(
-        'en-IN'
-      )}.`
+      return `The terminal's previous transaction amount was ₹${value.toLocaleString('en-IN')}.`
 
     case 'TERMINAL_TX_COUNT_BEFORE':
-      return `The terminal has processed ${item.value.toLocaleString(
-        'en-IN'
-      )} previous transactions in the available history.`
+      return `The terminal has processed ${value.toLocaleString('en-IN')} previous transactions in the available history.`
 
     case 'TERMINAL_TX_COUNT_5M':
-      return `The terminal processed ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last 5 minutes.`
+      return `The terminal processed ${value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
 
     case 'TERMINAL_TX_COUNT_1H':
-      return `The terminal processed ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last hour.`
+      return `The terminal processed ${value.toLocaleString('en-IN')} transaction(s) in the last hour.`
 
     case 'TERMINAL_TX_COUNT_24H':
-      return `The terminal processed ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last 24 hours.`
+      return `The terminal processed ${value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
+
+    case 'TERMINAL_HAS_HISTORY':
+      return value > 0
+        ? 'The terminal has historical transaction activity available for comparison.'
+        : 'No prior terminal history is available for comparison.'
 
     case 'SYSTEM_TX_COUNT_5M':
-      return `The system processed ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last 5 minutes.`
+      return `The system processed ${value.toLocaleString('en-IN')} transaction(s) in the last 5 minutes.`
 
     case 'SYSTEM_TX_COUNT_1H':
-      return `The system processed ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last hour.`
+      return `The system processed ${value.toLocaleString('en-IN')} transaction(s) in the last hour.`
 
     case 'SYSTEM_TX_COUNT_24H':
-      return `The system processed ${item.value.toLocaleString(
-        'en-IN'
-      )} transaction(s) in the last 24 hours.`
+      return `The system processed ${value.toLocaleString('en-IN')} transaction(s) in the last 24 hours.`
 
     default:
       return item.description
   }
 }
+
+function getDirectionLabel(
+  direction: Prediction['explanations'][number]['direction']
+) {
+  if (direction === 'increases_risk') return 'Increases fraud risk'
+  if (direction === 'reduces_risk') return 'Reduces fraud risk'
+  return 'Minimal influence'
+}
+
 
 
 /* =========================================================
@@ -775,7 +806,7 @@ function Dashboard({
 
             <small>
               {prediction
-                ? 'Model confidence for this transaction'
+                ? 'Estimated fraud probability'
                 : 'Awaiting transaction'}
             </small>
           </div>
@@ -1824,60 +1855,112 @@ function Dashboard({
                 </div>
 
 
-                <div className="assessment-reasons">
+                  <div className="assessment-reasons">
 
-                  <div className="assessment-section-label">
-                    <span>
-                      WHY THIS RESULT?
-                    </span>
+                    <div className="assessment-section-label">
+                      <span>
+                        WHY THIS RESULT?
+                      </span>
 
-                    <p>
-                      The strongest signals influencing
-                      the risk assessment.
-                    </p>
+                      <p>
+                        The strongest model signals, separated by whether
+                        they increased or reduced fraud risk.
+                      </p>
+                    </div>
+
+                    {(() => {
+                      const riskIncreasing = prediction.explanations
+                        .filter(
+                          (item) => item.direction === 'increases_risk'
+                        )
+                        .sort(
+                          (a, b) => Math.abs(b.impact) - Math.abs(a.impact)
+                        )
+                        .slice(0, 3)
+
+                      const riskReducing = prediction.explanations
+                        .filter(
+                          (item) => item.direction === 'reduces_risk'
+                        )
+                        .sort(
+                          (a, b) => Math.abs(b.impact) - Math.abs(a.impact)
+                        )
+                        .slice(0, 3)
+
+                      return (
+                        <>
+                          <div className="assessment-section-label">
+                            <span>
+                              RISK-INCREASING SIGNALS
+                            </span>
+                          </div>
+
+                          {riskIncreasing.length > 0 ? (
+                            riskIncreasing.map((item) => (
+                              <div
+                                className="assessment-reason"
+                                key={`up-${item.feature}`}
+                              >
+                                <div className="assessment-reason-icon reason-up">
+                                  ↑
+                                </div>
+
+                                <div>
+                                  <strong>
+                                    {getFeatureLabel(item.feature)}
+                                  </strong>
+
+                                  <p>
+                                    {getHumanReason(item)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="assessment-no-reasons">
+                              No material risk-increasing signals were present
+                              among the strongest contributors.
+                            </p>
+                          )}
+
+                          <div className="assessment-section-label">
+                            <span>
+                              RISK-REDUCING SIGNALS
+                            </span>
+                          </div>
+
+                          {riskReducing.length > 0 ? (
+                            riskReducing.map((item) => (
+                              <div
+                                className="assessment-reason"
+                                key={`down-${item.feature}`}
+                              >
+                                <div className="assessment-reason-icon reason-down">
+                                  ↓
+                                </div>
+
+                                <div>
+                                  <strong>
+                                    {getFeatureLabel(item.feature)}
+                                  </strong>
+
+                                  <p>
+                                    {getHumanReason(item)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="assessment-no-reasons">
+                              No material risk-reducing signals were present
+                              among the strongest contributors.
+                            </p>
+                          )}
+                        </>
+                      )
+                    })()}
+
                   </div>
-
-
-                  {prediction.explanations
-                    .slice(0, 3)
-                    .map((item) => (
-
-                      <div
-                        className="assessment-reason"
-                        key={item.feature}
-                      >
-
-                        <div
-                          className={`assessment-reason-icon ${
-                            item.direction ===
-                            'increases_risk'
-                              ? 'reason-up'
-                              : 'reason-down'
-                          }`}
-                        >
-                          {item.direction ===
-                          'increases_risk'
-                            ? '↑'
-                            : '↓'}
-                        </div>
-
-                        <div>
-                          <strong>
-                            {getFeatureLabel(
-                              item.feature
-                            )}
-                          </strong>
-
-                          <p>
-                            {getHumanReason(item)}
-                          </p>
-                        </div>
-
-                      </div>
-
-                    ))}
-
-                </div>
 
 
                 <details className="technical-details">
@@ -1895,7 +1978,14 @@ function Dashboard({
 
                   <div className="technical-details-content">
 
-                    {prediction.explanations.map(
+                      <p className="assessment-section-label">
+                        SHAP contribution shows how strongly each feature
+                        pushed the model output higher or lower for this
+                        transaction. It is a model contribution, not a
+                        percentage of fraud probability.
+                      </p>
+
+                      {prediction.explanations.map(
                       (item, index) => (
 
                         <div
@@ -1923,7 +2013,10 @@ function Dashboard({
                                   item.direction ===
                                   'increases_risk'
                                     ? 'impact positive'
-                                    : 'impact negative'
+                                    : item.direction ===
+                                      'reduces_risk'
+                                      ? 'impact negative'
+                                      : 'impact'
                                 }
                               >
                                 {item.impact > 0
@@ -1942,7 +2035,10 @@ function Dashboard({
                                   item.direction ===
                                   'increases_risk'
                                     ? 'impact-fill positive-fill'
-                                    : 'impact-fill negative-fill'
+                                    : item.direction ===
+                                      'reduces_risk'
+                                      ? 'impact-fill negative-fill'
+                                      : 'impact-fill'
                                 }
                                 style={{
                                   width: `${Math.min(
@@ -2032,6 +2128,10 @@ function Dashboard({
             </div>
 
 
+            {/* =========================
+                OPERATIONAL SNAPSHOT
+            ========================= */}
+
             <div className="analytics-grid">
 
               <div className="analytics-stat">
@@ -2040,9 +2140,25 @@ function Dashboard({
                 </span>
 
                 <strong>
-                  {analytics?.total_transactions ??
-                    '—'}
+                  {analytics?.total_transactions ?? '—'}
                 </strong>
+              </div>
+
+
+              <div className="analytics-stat">
+                <span>
+                  Flagged
+                </span>
+
+                <strong>
+                  {analytics?.flagged_transactions ?? '—'}
+                </strong>
+
+                <small>
+                  {analytics
+                    ? `${analytics.flagged_rate}% of volume`
+                    : '—'}
+                </small>
               </div>
 
 
@@ -2054,32 +2170,114 @@ function Dashboard({
                 <strong>
                   {analytics?.blocked ?? '—'}
                 </strong>
+
+                <small>
+                  {analytics
+                    ? `₹${analytics.blocked_value.toLocaleString('en-IN')}`
+                    : '—'}
+                </small>
               </div>
 
 
               <div className="analytics-stat">
                 <span>
-                  Review
+                  Review Queue
                 </span>
 
                 <strong>
                   {analytics?.review ?? '—'}
                 </strong>
-              </div>
 
-
-              <div className="analytics-stat">
-                <span>
-                  Allowed
-                </span>
-
-                <strong>
-                  {analytics?.allowed ?? '—'}
-                </strong>
+                <small>
+                  {analytics
+                    ? `₹${analytics.review_value.toLocaleString('en-IN')}`
+                    : '—'}
+                </small>
               </div>
 
             </div>
 
+
+            {/* =========================
+                FINANCIAL EXPOSURE
+            ========================= */}
+
+            <div className="risk-distribution">
+
+              <div className="risk-distribution-header">
+                <span>
+                  FINANCIAL EXPOSURE
+                </span>
+
+                {analytics && (
+                  <span>
+                    {analytics.flagged_value_percentage}% of transaction value flagged
+                  </span>
+                )}
+              </div>
+
+
+              <div className="risk-distribution-grid">
+
+                <div>
+                  <span>
+                    Total Value
+                  </span>
+
+                  <strong>
+                    {analytics
+                      ? `₹${analytics.total_value.toLocaleString('en-IN')}`
+                      : '—'}
+                  </strong>
+                </div>
+
+
+                <div>
+                  <span>
+                    Flagged Value
+                  </span>
+
+                  <strong>
+                    {analytics
+                      ? `₹${analytics.flagged_value.toLocaleString('en-IN')}`
+                      : '—'}
+                  </strong>
+                </div>
+
+
+                <div>
+                  <span>
+                    Blocked Value
+                  </span>
+
+                  <strong>
+                    {analytics
+                      ? `₹${analytics.blocked_value.toLocaleString('en-IN')}`
+                      : '—'}
+                  </strong>
+                </div>
+
+
+                <div>
+                  <span>
+                    Review Value
+                  </span>
+
+                  <strong>
+                    {analytics
+                      ? `₹${analytics.review_value.toLocaleString('en-IN')}`
+                      : '—'}
+                  </strong>
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {/* =========================
+                RISK DISTRIBUTION
+            ========================= */}
 
             <div className="risk-distribution">
 
@@ -2109,8 +2307,7 @@ function Dashboard({
                   </span>
 
                   <strong>
-                    {analytics?.medium_high_risk ??
-                      '—'}
+                    {analytics?.medium_high_risk ?? '—'}
                   </strong>
                 </div>
 
@@ -2139,6 +2336,29 @@ function Dashboard({
               </div>
 
             </div>
+
+
+            {/* =========================
+                RISK MANAGER INSIGHT
+            ========================= */}
+
+            {analytics && analytics.total_transactions > 0 && (
+              <div className="analytics-insight">
+
+                <div>
+                  <span>
+                    RISK MANAGER INSIGHT
+                  </span>
+
+                  <p>
+                    {analytics.flagged_transactions === 0
+                      ? 'No transactions are currently flagged. All analysed activity is within the current decision policy.'
+                      : `${analytics.flagged_rate}% of transactions are currently flagged for review or blocking, representing ${analytics.flagged_value_percentage}% of total transaction value.`}
+                  </p>
+                </div>
+
+              </div>
+            )}
 
           </div>
 
@@ -2326,16 +2546,22 @@ function Dashboard({
 function App() {
   const [authenticated, setAuthenticated] = useState(false)
 
+  const [authChecking, setAuthChecking] = useState(true)
+
+  const [authScreen, setAuthScreen] =
+    useState<
+      'landing' |
+      'login' |
+      'signup' |
+      'forgot-password'
+    >('landing')
+
   function handleLogout() {
     localStorage.removeItem('animus_token')
     localStorage.removeItem('animus_user')
     setAuthenticated(false)
+    setAuthScreen('landing')
   }
-
-  const [authChecking, setAuthChecking] = useState(true)
-
-  const [authScreen, setAuthScreen] =
-    useState<'login' | 'signup'>('login')
 
   useEffect(() => {
     async function validateToken() {
@@ -2365,7 +2591,8 @@ function App() {
 
         const user = await response.json()
 
-        const storedUser = localStorage.getItem('animus_user')
+        const storedUser =
+          localStorage.getItem('animus_user')
 
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser)
@@ -2403,7 +2630,9 @@ function App() {
       <div className="app">
         <main className="dashboard">
           <section className="welcome">
-            <p className="eyebrow">AUTHENTICATION</p>
+            <p className="eyebrow">
+              AUTHENTICATION
+            </p>
 
             <h2>
               Checking your session...
@@ -2419,7 +2648,24 @@ function App() {
   }
 
   if (authenticated) {
-    return <Dashboard onLogout={handleLogout} />
+    return (
+      <Dashboard
+        onLogout={handleLogout}
+      />
+    )
+  }
+
+  if (authScreen === 'landing') {
+    return (
+      <LandingPage
+        onGetStarted={() =>
+          setAuthScreen('signup')
+        }
+        onSignIn={() =>
+          setAuthScreen('login')
+        }
+      />
+    )
   }
 
   if (authScreen === 'signup') {
@@ -2427,6 +2673,22 @@ function App() {
       <SignUp
         onBackToLogin={() =>
           setAuthScreen('login')
+        }
+        onBackToHome={() =>
+          setAuthScreen('landing')
+        }
+      />
+    )
+  }
+
+  if (authScreen === 'forgot-password') {
+    return (
+      <ForgotPassword
+        onBackToLogin={() =>
+          setAuthScreen('login')
+        }
+        onBackToHome={() =>
+          setAuthScreen('landing')
         }
       />
     )
@@ -2439,6 +2701,12 @@ function App() {
       }
       onSignUp={() =>
         setAuthScreen('signup')
+      }
+      onForgotPassword={() =>
+        setAuthScreen('forgot-password')
+      }
+      onBackToHome={() =>
+        setAuthScreen('landing')
       }
     />
   )

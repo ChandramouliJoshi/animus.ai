@@ -3,9 +3,16 @@ import { useState } from 'react'
 type LoginProps = {
   onLogin: () => void
   onSignUp: () => void
+  onForgotPassword: () => void
+  onBackToHome: () => void
 }
 
-function Login({ onLogin, onSignUp }: LoginProps) {
+function Login({
+  onLogin,
+  onSignUp,
+  onForgotPassword,
+  onBackToHome,
+}: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -133,6 +140,14 @@ function Login({ onLogin, onSignUp }: LoginProps) {
                 <label htmlFor="login-password">
                   Password
                 </label>
+
+                <button
+                  type="button"
+                  className="login-forgot-button"
+                  onClick={onForgotPassword}
+                >
+                  Forgot password?
+                </button>
               </div>
 
               <div className="password-input">
@@ -214,6 +229,14 @@ function Login({ onLogin, onSignUp }: LoginProps) {
           >
             Don't have an account?{' '}
             <strong>Sign Up</strong>
+          </button>
+
+          <button
+            type="button"
+            className="auth-home-button"
+            onClick={onBackToHome}
+          >
+            ← Back to home
           </button>
         </section>
 

@@ -223,8 +223,17 @@ def get_transactions(
     return [dict(row) for row in rows]
 
 
+# =========================================================
+# ANALYTICS
+# =========================================================
+
+
 def get_analytics(user_id: int):
     connection = get_connection()
+
+    # =========================
+    # TRANSACTION COUNTS
+    # =========================
 
     total_transactions = connection.execute(
         """
@@ -264,6 +273,10 @@ def get_analytics(user_id: int):
         """,
         (user_id,),
     ).fetchone()["count"]
+
+    # =========================
+    # RISK LEVEL COUNTS
+    # =========================
 
     high_risk = connection.execute(
         """
@@ -305,15 +318,89 @@ def get_analytics(user_id: int):
         (user_id,),
     ).fetchone()["count"]
 
+    # =========================
+    # FINANCIAL VALUE ANALYTICS
+    # =========================
+
+    total_value = connection.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM transactions
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()["total"]
+
+    blocked_value = connection.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM transactions
+        WHERE user_id = ?
+        AND decision = 'BLOCK'
+        """,
+        (user_id,),
+    ).fetchone()["total"]
+
+    review_value = connection.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM transactions
+        WHERE user_id = ?
+        AND decision = 'REVIEW'
+        """,
+        (user_id,),
+    ).fetchone()["total"]
+
+    flagged_value = blocked_value + review_value
+
     connection.close()
 
+    # =========================
+    # DERIVED METRICS
+    # =========================
+
+    flagged_transactions = blocked + review
+
+    if total_transactions > 0:
+        flagged_rate = (
+            flagged_transactions / total_transactions
+        ) * 100
+    else:
+        flagged_rate = 0
+
+    if total_value > 0:
+        flagged_value_percentage = (
+            flagged_value / total_value
+        ) * 100
+    else:
+        flagged_value_percentage = 0
+
     return {
+        # Transaction volume
         "total_transactions": total_transactions,
+
+        # Decision breakdown
         "blocked": blocked,
         "review": review,
         "allowed": allowed,
+
+        # Risk distribution
         "high_risk": high_risk,
         "medium_high_risk": medium_high_risk,
         "medium_risk": medium_risk,
         "low_risk": low_risk,
+
+        # Financial exposure
+        "total_value": total_value,
+        "blocked_value": blocked_value,
+        "review_value": review_value,
+        "flagged_value": flagged_value,
+
+        # Derived risk metrics
+        "flagged_transactions": flagged_transactions,
+        "flagged_rate": round(flagged_rate, 2),
+        "flagged_value_percentage": round(
+            flagged_value_percentage,
+            2
+        ),
     }

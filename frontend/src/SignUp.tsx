@@ -2,9 +2,13 @@ import { useState } from 'react'
 
 type SignUpProps = {
   onBackToLogin: () => void
+  onBackToHome: () => void
 }
 
-function SignUp({ onBackToLogin }: SignUpProps) {
+function SignUp({
+  onBackToLogin,
+  onBackToHome,
+}: SignUpProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -344,6 +348,14 @@ function SignUp({ onBackToLogin }: SignUpProps) {
           >
             Already have an account?{' '}
             <strong>Sign In</strong>
+          </button>
+
+          <button
+            type="button"
+            className="auth-home-button"
+            onClick={onBackToHome}
+          >
+            ← Back to home
           </button>
         </section>
 
